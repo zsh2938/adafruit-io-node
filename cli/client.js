@@ -126,6 +126,7 @@ class ClientCLI extends CLI {
     });
 
     yargs.command('watch', 'Listen for new values', this.handleWatch.bind(this, api));
+    yargs.command('write', `Write STDIN to ${api.toLowerCase()}`, this.handleWrite.bind(this, api));
 
     yargs.command('help', 'Show help');
 
@@ -141,7 +142,7 @@ class ClientCLI extends CLI {
     if(command === 'help')
       return yargs.showHelp();
 
-    if(command === 'watch')
+    if(command === 'watch' || command === 'write')
       return;
 
     if(Object.keys(operations).indexOf(command) < 0)
@@ -242,15 +243,43 @@ class ClientCLI extends CLI {
     if(argv._.length < 2)
       return yargs.showHelp();
 
-    this.client[api].readable(argv._[1]).on('data', obj => {
+    this.client[api].readable(argv._[1]).on('data', message => {
 
       if(argv.json)
-        return console.log(JSON.stringify(obj));
+        return console.log(message.toString());
+
+      const obj = JSON.parse(message);
 
       this.info(`${api} -> ${obj.name || obj.id}`);
       console.log(obj);
 
     });
+
+  }
+
+  handleWrite(api, yargs) {
+
+    yargs.command('id', 'ID, key, or name to write to');
+    yargs.command('help', 'Show help');
+
+    const argv = yargs
+      .usage(`Usage: adafruit-io client ${api.toLowerCase()} write <id>`)
+      .updateStrings({
+        'Commands:': 'Parameters:'
+      })
+      .argv;
+
+    if(argv._[1] === 'help')
+      return yargs.showHelp();
+
+    if(argv._.length < 2)
+      return yargs.showHelp();
+
+    console.log('Waiting for input...');
+    console.log('Type a value and press return to send to %s.', argv._[1]);
+    console.log('Use CTRL-C to quit');
+
+    process.stdin.pipe(this.client[api].writable(argv._[1]));
 
   }
 

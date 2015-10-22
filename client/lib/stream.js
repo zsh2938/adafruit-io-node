@@ -8,8 +8,9 @@ class Stream extends DuplexStream {
   constructor(options) {
 
     super({
-      readableObjectMode: true,
-      writableObjectMode: true
+      readableObjectMode: false,
+      writableObjectMode: false,
+      highWaterMark: 102400
     });
 
     this.type = 'feeds';
@@ -69,7 +70,7 @@ class Stream extends DuplexStream {
       return this.once('message', () => this._read());
 
     try {
-      this.push(JSON.parse(this.buffer.shift().toString()));
+      this.push(this.buffer.shift());
     } catch(err) {
       this.emit('error', err);
       this.once('message', () => this._read());
@@ -82,10 +83,7 @@ class Stream extends DuplexStream {
     if(! this.connected)
       return this.once('connected', () => this._write(data, encoding, next));
 
-    if(! data || ! data.toString)
-      return next('invalid data sent to feed');
-
-    this.client.publish(`${this.username}/${this.type}/${this.id}`, data.toString(), next);
+    this.client.publish(`${this.username}/${this.type}/${this.id}`, data.toString().trim(), next);
 
   }
 
